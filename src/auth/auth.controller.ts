@@ -11,12 +11,19 @@ import { AuthService } from './auth.service';
 import {
   AuthLoginLocalBodyDTO,
   AuthRegisterBodyDTO,
+  AuthRegisterResDTO,
   EmailValidationBodyDTO,
   EmailValidationConfirmDTO,
 } from 'src/types';
-import { ApiBody, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 @Controller('auth')
+@ApiExtraModels(AuthRegisterResDTO)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -38,7 +45,18 @@ export class AuthController {
       },
     },
   })
-  async createUser(@Body() body: AuthRegisterBodyDTO) {
+  @ApiResponse({
+    status: 201,
+    description: 'Return a pair of access and refresh tokens',
+    content: {
+      'application/json': {
+        schema: {
+          $ref: '#/components/schemas/AuthRegisterResDTO',
+        },
+      },
+    },
+  })
+  async createUser(@Body() body: AuthRegisterBodyDTO, @Res() res: Response) {
     return body;
   }
 
@@ -54,6 +72,17 @@ export class AuthController {
           schema: {
             $ref: '#/components/schemas/AuthLoginLocalBodyDTO',
           },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return a pair of access and refresh tokens',
+    content: {
+      'application/json': {
+        schema: {
+          $ref: '#/components/schemas/AuthRegisterResDTO',
         },
       },
     },
@@ -88,6 +117,10 @@ export class AuthController {
         },
       },
     },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns status of sending email (done/cancelled)',
   })
   @HttpCode(HttpStatus.OK)
   async recoveryByEmail(
@@ -124,6 +157,10 @@ export class AuthController {
         },
       },
     },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns status of setting new password (done/cancelled)',
   })
   @HttpCode(HttpStatus.OK)
   async recoveryByEmailConfirm(

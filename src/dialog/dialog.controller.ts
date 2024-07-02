@@ -10,9 +10,29 @@ import {
 } from '@nestjs/common';
 import { DialogService } from './dialog.service';
 import { Response } from 'express';
-import { SendMessageBodyDTO } from 'src/types';
-import { ApiBody, ApiOperation, ApiParam } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import {
+  csvBody,
+  GetNewMessageResID,
+  GetUserDialogDTO,
+  GetUserDialogsDTO,
+  SendMessageBodyDTO,
+} from 'src/types';
 
+@ApiExtraModels(
+  SendMessageBodyDTO,
+  GetUserDialogDTO,
+  GetUserDialogsDTO,
+  GetNewMessageResID,
+)
 @Controller('dialogs')
 export class DialogController {
   constructor(private readonly dialogService: DialogService) {}
@@ -22,6 +42,20 @@ export class DialogController {
     tags: ['Dialog'],
     summary: 'Get all dialogs',
     description: 'The user gets all his/her dialogs',
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Return all user's dialog",
+    content: {
+      'application/json': {
+        schema: {
+          $ref: getSchemaPath(GetUserDialogsDTO),
+        },
+        example: {
+          dialogsID: ['21b3h12b', '1b2j3b12j'],
+        },
+      },
+    },
   })
   @HttpCode(HttpStatus.OK)
   async getAllDialogs(@Res() res: Response) {
@@ -38,7 +72,21 @@ export class DialogController {
     name: 'dialogID',
     description: "Dialog's",
     type: 'string',
-    example: '123456',
+    example: 'bb88s7dfg2',
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Return dialog's messages",
+    content: {
+      'application/json': {
+        schema: {
+          $ref: getSchemaPath(GetUserDialogDTO),
+        },
+        example: {
+          messagesID: ['yd2312dad32', 'hd8f2u1'],
+        },
+      },
+    },
   })
   @HttpCode(HttpStatus.OK)
   async getDialogByID(
@@ -60,25 +108,28 @@ export class DialogController {
     type: 'string',
     example: '123456',
   })
-  @ApiBody({
-    schema: {
-      $ref: '#/components/schemas/SendMessageBodyDTO',
-    },
-    examples: {
-      example1: {
-        value: {
-          messageText: 'Hello, dear friend!',
-          file: 'i dont know what to write',
+  @ApiBody(csvBody)
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 201,
+    description: 'Return sent message ID',
+    content: {
+      'application/json': {
+        schema: {
+          $ref: getSchemaPath(GetNewMessageResID),
+        },
+        example: {
+          messageID: '321jn312n',
         },
       },
     },
   })
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.CREATED)
   async sendMessage(
     @Param('dialogID') dialogID: string,
     @Body() body: SendMessageBodyDTO,
     @Res() res: Response,
   ) {
-    return res.status(200).send({ ...body, dialogID });
+    return res.send({ messageID: 'd32123' });
   }
 }
