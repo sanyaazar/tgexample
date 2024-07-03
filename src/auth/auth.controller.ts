@@ -10,13 +10,16 @@ import { Response } from 'express';
 import { AuthService } from './auth.service';
 import {
   AuthLoginLocalBodyDTO,
+  authRegisterBody,
   AuthRegisterBodyDTO,
   AuthRegisterResDTO,
   EmailValidationBodyDTO,
   EmailValidationConfirmDTO,
+  RegisterContentBodyDTO,
 } from 'src/types';
 import {
   ApiBody,
+  ApiConsumes,
   ApiExtraModels,
   ApiOperation,
   ApiResponse,
@@ -28,22 +31,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @ApiBody(authRegisterBody)
+  @ApiConsumes('multipart/form-data')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     tags: ['Authentication'],
     summary: 'Creates a new user',
     description:
       'Registers a new user by providing login, password, email (optional: tel, date of birth, display name)',
-    requestBody: {
-      description: 'User data for registration',
-      content: {
-        'application/json': {
-          schema: {
-            $ref: '#/components/schemas/AuthRegisterBodyDTO',
-          },
-        },
-      },
-    },
   })
   @ApiResponse({
     status: 201,

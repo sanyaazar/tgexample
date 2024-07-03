@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiBodyOptions, ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsAlphanumeric,
@@ -71,4 +71,45 @@ export class AuthRegisterBodyDTO {
   @IsOptional()
   @Length(2, 50)
   displayName?: string;
+
+  @ApiProperty({
+    description: 'Display photo',
+    required: false,
+    maxLength: 50,
+    example: 'photo.png',
+  })
+  @IsOptional()
+  @Length(2, 50)
+  displayPhoto?: string;
 }
+
+export const authRegisterBody: ApiBodyOptions = {
+  schema: {
+    type: 'object',
+    properties: {
+      displayPhoto: {
+        type: 'string',
+        format: 'binary',
+      },
+
+      login: {
+        type: 'string',
+      },
+      password: {
+        type: 'string',
+      },
+      email: {
+        type: 'email',
+      },
+      tel: {
+        type: 'telephone',
+      },
+      dateOfBirth: {
+        type: 'date',
+      },
+      displayName: {
+        type: 'string',
+      },
+    },
+  },
+};

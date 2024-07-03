@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Chat {
+  chatID    Int       @id @default(autoincrement())
+  chatType  String
+  chatPhoto String
+  createdAt DateTime  @default(now())
+
+  messages Message[] @relation("MessagesToChat")
+}
+
+model User {
+  userID         Int       @id @default(autoincrement())
+  login          String    @unique
+  password       String
+  tel            String    @unique
+  email          String    @unique
+  displayName    String?
+  // displayPhoto   Content?  @relation("UserContent", fields: [displayPhotoID], references: [contentID])
+  displayPhotoID Int? @unique
+  dateOfBirth    DateTime?
+
+  messages Message[] @relation("MessagesToUser")
+}
+
+model Content {
+  contentID Int      @id @default(autoincrement())
+  file      String
+  message   Message? @relation(fields: [messageID], references: [messageID])
+  messageID Int
+}
+
+model Message {
+  messageID   Int       @id @default(autoincrement())
+  messageText String
+  user        User      @relation("MessagesToUser", fields: [userID], references: [userID])
+  userID      Int
+  chat        Chat      @relation("MessagesToChat", fields: [chatID], references: [chatID])
+  chatID      Int
+  sendAt      DateTime  @default(now())
+  Content     Content[]
+}
+
+model ChatUser {
+  chatID   Int
+  userID   Int
+  userRole Role @default(USER)
+  joinedAt DateTime @default(now())
+
+  @@id([chatID, userID])
+}
+
+enum Role {
+  ADMIN
+  USER
+}
