@@ -5,3 +5,4 @@ export * from './get-user-dialogs-res.dto';
 export * from './get-new-message-res.dto';
 export * from './get-user-contacts-res.dto';
 export * from './get-user-contact-info-res.dto';
+export * from './get-chat-id-res.dto';

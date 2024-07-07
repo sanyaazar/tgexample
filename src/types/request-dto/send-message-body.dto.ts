@@ -13,8 +13,8 @@ export class SendMessageBodyDTO {
   @Length(1, 255)
   messageText: string;
 
-  @ApiProperty({ description: 'File in binary format', required: false })
-  file: string;
+  // @ApiProperty({ description: 'File in binary format', required: false })
+  // file: string;
 }
 
 export const csvBody: ApiBodyOptions = {

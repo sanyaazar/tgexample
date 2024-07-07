@@ -16,27 +16,86 @@ datasource db {
 
 model Chat {
   chatID    Int       @id @default(autoincrement())
-  chatType  String
-  chatPhoto String
+  chatPhoto String?
   createdAt DateTime  @default(now())
 
-  messages Message[] @relation("MessagesToChat")
+  chatMessages ChatMessage[] @relation()
+  chatUsers ChatUser[] @relation()
 }
 
+model ChatMessage {
+  chatID    Int       
+  senderID Int
+  messageID Int 
+
+  chats Chat @relation( fields: [chatID], references: [chatID])
+  users User @relation(fields: [senderID], references: [userID])
+  message Message @relation(fields: [messageID], references: [messageID])
+  @@id([chatID, senderID, messageID])
+}
+
+model ChatUser {
+  chatID   Int
+  userID   Int 
+  userRole Role @default(USER)
+  joinedAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatID], references: [chatID])
+  user User @relation(fields: [userID], references: [userID])
+
+  @@id([chatID, userID])
+}
+
+model Message {
+  messageID   Int       @id @default(autoincrement())
+  messageText String
+  userID      Int
+  sendAt      DateTime  @default(now())
+
+  user User      @relation(fields: [userID], references: [userID])
+  dialog DialogMessage[] @relation()
+  chat ChatMessage[] @relation()
+  Content     Content[]
+}
+
+model DialogMessage {
+  senderID Int
+  receiverID Int
+  messageID Int
+
+  sender User @relation("Sender", fields: [senderID], references: [userID])
+  receiver User @relation("Receiver", fields: [receiverID], references: [userID])
+  message Message @relation(fields: [messageID], references: [messageID])
+  @@id([senderID, receiverID, messageID])
+}
 model User {
   userID         Int       @id @default(autoincrement())
   login          String    @unique
   password       String
   tel            String    @unique
   email          String    @unique
-  displayName    String?
+  displayName    String
   // displayPhoto   Content?  @relation("UserContent", fields: [displayPhotoID], references: [contentID])
-  displayPhotoID Int? @unique
+  displayPhotoID String? @unique
   dateOfBirth    DateTime?
 
-  messages Message[] @relation("MessagesToUser")
+  user1 Contact[] @relation("contact1")
+  user2 Contact[] @relation("contact2")
+  chats ChatMessage[] @relation()
+  users ChatUser[] @relation()
+  dialogSender DialogMessage[] @relation("Sender")
+  dialogReceiver DialogMessage[] @relation("Receiver")
+  messages Message[] @relation()
+  RecoveryCodesByEmail RecoveryCodesByEmail[] @relation()
 }
 
+
+model RecoveryCodesByEmail {
+  user        User      @relation(fields: [userID], references: [userID])
+  userID Int @unique
+  code String
+  finishedAt DateTime
+}
 model Content {
   contentID Int      @id @default(autoincrement())
   file      String
@@ -44,25 +103,17 @@ model Content {
   messageID Int
 }
 
-model Message {
-  messageID   Int       @id @default(autoincrement())
-  messageText String
-  user        User      @relation("MessagesToUser", fields: [userID], references: [userID])
-  userID      Int
-  chat        Chat      @relation("MessagesToChat", fields: [chatID], references: [chatID])
-  chatID      Int
-  sendAt      DateTime  @default(now())
-  Content     Content[]
+model Contact {
+  contact1 Int
+  contact2 Int
+
+  user1 User @relation("contact1", fields: [contact1], references: [userID])
+  user2 User @relation("contact2", fields: [contact2], references: [userID])
+
+  @@id([contact1, contact2])
 }
 
-model ChatUser {
-  chatID   Int
-  userID   Int
-  userRole Role @default(USER)
-  joinedAt DateTime @default(now())
 
-  @@id([chatID, userID])
-}
 
 enum Role {
   ADMIN

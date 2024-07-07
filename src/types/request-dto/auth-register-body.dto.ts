@@ -48,9 +48,8 @@ export class AuthRegisterBodyDTO {
     required: false,
     example: '+79991234567',
   })
-  @IsOptional()
   @IsPhoneNumber()
-  tel?: string;
+  tel: string;
 
   @ApiProperty({
     description: 'Date of birth',
@@ -60,7 +59,7 @@ export class AuthRegisterBodyDTO {
   @IsOptional()
   @Type(() => Date)
   @IsDate()
-  dateOfBirth: Date;
+  dateOfBirth?: Date;
 
   @ApiProperty({
     description: 'Display name',

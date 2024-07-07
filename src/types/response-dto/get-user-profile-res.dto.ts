@@ -40,7 +40,7 @@ export class GetUserProfileResDTO {
     type: 'file',
     required: false,
   })
-  displayPhoto?: string;
+  displayPhotoID?: string;
 
   @ApiProperty({
     description: "User's birthday date",

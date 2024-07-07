@@ -15,6 +15,7 @@ import {
   AuthRegisterResDTO,
   EmailValidationBodyDTO,
   EmailValidationConfirmDTO,
+  Public,
   RegisterContentBodyDTO,
 } from 'src/types';
 import {
@@ -31,6 +32,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @Public()
   @ApiBody(authRegisterBody)
   @ApiConsumes('multipart/form-data')
   @HttpCode(HttpStatus.CREATED)
@@ -52,10 +54,12 @@ export class AuthController {
     },
   })
   async createUser(@Body() body: AuthRegisterBodyDTO, @Res() res: Response) {
-    return body;
+    const result = await this.authService.register(body);
+    return res.status(201).send(result);
   }
 
   @Post('login/local')
+  @Public()
   @ApiOperation({
     tags: ['Authentication'],
     summary: 'Local login',
@@ -84,10 +88,12 @@ export class AuthController {
   })
   @HttpCode(HttpStatus.OK)
   async localLogin(@Body() body: AuthLoginLocalBodyDTO, @Res() res: Response) {
-    return res.status(200).send(body);
+    const result = await this.authService.localLogin(body);
+    return res.status(200).send(result);
   }
 
   @Post('recovery/email')
+  @Public()
   @ApiOperation({
     tags: ['Recovery'],
     summary: 'Recovery using email',
@@ -122,10 +128,12 @@ export class AuthController {
     @Body() body: EmailValidationBodyDTO,
     @Res() res: Response,
   ) {
-    return res.sendStatus(200);
+    const result = await this.authService.recoveryByEmail(body);
+    return res.status(200).send(result);
   }
 
   @Post('recovery/email/confirmation')
+  @Public()
   @ApiOperation({
     tags: ['Recovery'],
     summary: 'Confirm recovery',
@@ -162,6 +170,7 @@ export class AuthController {
     @Body() body: EmailValidationConfirmDTO,
     @Res() res: Response,
   ) {
-    return res.sendStatus(200);
+    const result = await this.authService.recoveryByEmailConfirm(body);
+    return res.status(200).send(result);
   }
 }
