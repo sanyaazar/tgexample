@@ -10,7 +10,7 @@ export class EmailService {
       secure: true, // true для 465, false для других портов
       auth: {
         user: 'avabacktest@yandex.ru',
-        pass: 'teabnbflhelvhlgy',
+        pass: '',
       },
     });
 
