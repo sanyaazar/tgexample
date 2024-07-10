@@ -1,10 +1,7 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
-import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { UserRepository } from 'src/database';
+import { DialogRepository } from 'src/database/dialog.repository';
+
 import {
   GetNewMessageResID,
   GetUserDialogDTO,
@@ -13,94 +10,52 @@ import {
 
 @Injectable()
 export class DialogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly dialogRepository: DialogRepository,
+    private readonly userRepository: UserRepository,
+  ) {}
 
   /**
-   * Получает все диалоги пользователя по его логину.
-   * @param {string} userID - id пользователя, чьи диалоги нужно получить.
-   * @returns {Promise<GetUserDialogsDTO>} Промис, который разрешается в объект, содержащий массив идентификаторов пользователей с которыми имеются диалоги.
-   * @throws {BadRequestException} Выбрасывает исключение, если не удалось найти диалоги пользователя.
+   * Получить всех пользователей с диалогами для данного пользователя
+   * @param {number} userID - ID пользователя
+   * @returns {Promise<GetUserDialogsDTO>} - Объект с пользователями в диалогах
    */
-  async getAllDialogs(userID: number): Promise<GetUserDialogsDTO> {
-    const userWithDialogs = await this.prisma.dialogMessage.findMany({
-      where: {
-        OR: [{ sender: { userID } }, { receiver: { userID } }],
-      },
-      select: {
-        senderID: true,
-        receiverID: true,
-      },
-    });
-
-    const uniqueUserIDs = [
-      ...new Set(
-        userWithDialogs.flatMap((dialog) => [
-          dialog.senderID,
-          dialog.receiverID,
-        ]),
-      ),
-    ].filter((id) => id !== userID);
-
-    if (uniqueUserIDs) {
-      return {
-        usersWithDialog: uniqueUserIDs,
-      };
-    }
-    throw new BadRequestException();
+  async getAllUsersWithDialogs(userID: number): Promise<GetUserDialogsDTO> {
+    const usersWithDialog =
+      await this.dialogRepository.getUsersWithDialogs(userID);
+    return usersWithDialog;
   }
 
   /**
-   * Получает диалог между текущим пользователем и пользователем с заданным логином.
-   *
-   * @param {number} userID - Идентификатор текущего пользователя.
-   * @param {string} userLogin - Логин пользователя, с которым текущий пользователь хочет начать диалог.
-   * @returns {Promise<GetUserDialogDTO>} Объект, содержащий массив идентификаторов сообщений в диалоге.
-   * @throws {BadRequestException} Если пользователь с заданным логином не найден или если диалог не найден.
+   * Получить ID сообщений для диалога с определенным пользователем
+   * @param {number} userID - ID пользователя
+   * @param {string} userLogin - Логин собеседника
+   * @returns {Promise<GetUserDialogDTO>} - Объект с ID сообщений для диалога
    */
-  async getDialogByID(
+  async getMessagesByUserID(
     userID: number,
     userLogin: string,
   ): Promise<GetUserDialogDTO> {
     // Шаг 1. Получаем ID собеседника
-    const userToChatWithID = await this.prisma.getUserIDByLogin(userLogin);
+    const userToChatWithID =
+      await this.userRepository.getUserIDByLogin(userLogin);
+    if (!userToChatWithID)
+      throw new NotFoundException("User with this login doesn't exist");
     // Шаг 2. Получаем сообщения диалога
-    const dialog = await this.prisma.dialogMessage.findMany({
-      where: {
-        OR: [
-          { AND: [{ senderID: userID }, { receiverID: userToChatWithID }] },
-          { AND: [{ senderID: userToChatWithID }, { receiverID: userID }] },
-        ],
-      },
-      orderBy: {
-        message: {
-          sendAt: 'asc',
-        },
-      },
-      select: {
-        messageID: true,
-        message: {
-          select: {
-            sendAt: true,
-          },
-        },
-      },
-    });
-
-    if (dialog.length) {
-      const messages = dialog.map((message) => message.messageID.toString());
-      return { messagesID: messages };
-    }
-    throw new BadRequestException();
+    const dialog = await this.dialogRepository.getMessagesByUserID(
+      userID,
+      userToChatWithID,
+    );
+    return dialog;
   }
 
   /**
-   * Отправляет сообщение от отправителя пользователю с указанным логином.
-   * @param {number} senderID - ID отправителя сообщения.
-   * @param {string} receiverLogin - Логин получателя сообщения.
-   * @param {string} messageText - Текст сообщения.
-   * @param {Express.Multer.File} file - Файл, прикрепленный к сообщению (если есть).
-   * @returns {Promise<GetNewMessageResID>} Объект с ID нового сообщения.
-   * @throws {BadRequestException} Если не удалось найти получателя или создать сообщение.
+   * Отправить сообщение собеседнику
+   * @param {number} senderID - ID отправителя
+   * @param {string} receiverLogin - Логин получателя
+   * @param {string} messageText - Текст сообщения
+   * @param {Express.Multer.File} file - Файл (прикрепленный к сообщению)
+   * @returns {Promise<GetNewMessageResID>} - Объект с ID нового сообщения
    */
   async sendMessage(
     senderID: number,
@@ -109,27 +64,18 @@ export class DialogService {
     file: Express.Multer.File,
   ): Promise<GetNewMessageResID> {
     // Шаг 1. Получаем ID собеседника
-    const receiverID = await this.prisma.getUserIDByLogin(receiverLogin);
+    const receiverID =
+      await this.userRepository.getUserIDByLogin(receiverLogin);
+    if (!receiverID)
+      throw new NotFoundException("User with this login doesn't exist");
     // Шаг 2. Создаем новое сообщение
-    const newMessage = await this.prisma.message.create({
-      data: {
-        messageText,
-        userID: senderID,
-      },
+    const newMessage = await this.dialogRepository.createDialogMessage({
+      messageText,
+      senderID,
+      receiverID,
     });
 
-    if (newMessage) {
-      const newDialogMessage = await this.prisma.dialogMessage.create({
-        data: {
-          senderID,
-          receiverID,
-          messageID: newMessage.messageID,
-        },
-      });
-      if (newDialogMessage)
-        return { messageID: newMessage.messageID.toString() };
-    }
-    // сохранение контента !!!
-    throw new BadRequestException();
+    return { messageID: newMessage.messageID.toString() };
+    // TODO: сохранение контента !!!
   }
 }

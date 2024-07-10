@@ -19,8 +19,8 @@ model Chat {
   chatPhoto String?
   createdAt DateTime  @default(now())
 
-  chatMessages ChatMessage[] @relation()
-  chatUsers ChatUser[] @relation()
+  ChatMessage ChatMessage[] @relation()
+  ChatUser ChatUser[] @relation()
 }
 
 model ChatMessage {
@@ -28,9 +28,9 @@ model ChatMessage {
   senderID Int
   messageID Int 
 
-  chats Chat @relation( fields: [chatID], references: [chatID])
-  users User @relation(fields: [senderID], references: [userID])
-  message Message @relation(fields: [messageID], references: [messageID])
+  Chat Chat @relation( fields: [chatID], references: [chatID])
+  User User @relation(fields: [senderID], references: [userID])
+  Message Message @relation(fields: [messageID], references: [messageID])
   @@id([chatID, senderID, messageID])
 }
 
@@ -40,8 +40,8 @@ model ChatUser {
   userRole Role @default(USER)
   joinedAt DateTime @default(now())
 
-  chat Chat @relation(fields: [chatID], references: [chatID])
-  user User @relation(fields: [userID], references: [userID])
+  Chat Chat @relation(fields: [chatID], references: [chatID])
+  User User @relation(fields: [userID], references: [userID])
 
   @@id([chatID, userID])
 }
@@ -52,9 +52,9 @@ model Message {
   userID      Int
   sendAt      DateTime  @default(now())
 
-  user User      @relation(fields: [userID], references: [userID])
-  dialog DialogMessage[] @relation()
-  chat ChatMessage[] @relation()
+  User User      @relation(fields: [userID], references: [userID])
+  DialogMessage DialogMessage[] @relation()
+  ChatMessage ChatMessage[] @relation()
   Content     Content[]
 }
 
@@ -65,7 +65,7 @@ model DialogMessage {
 
   sender User @relation("Sender", fields: [senderID], references: [userID])
   receiver User @relation("Receiver", fields: [receiverID], references: [userID])
-  message Message @relation(fields: [messageID], references: [messageID])
+  Message Message @relation(fields: [messageID], references: [messageID])
   @@id([senderID, receiverID, messageID])
 }
 model User {
@@ -79,13 +79,13 @@ model User {
   displayPhotoID String? @unique
   dateOfBirth    DateTime?
 
-  user1 Contact[] @relation("contact1")
-  user2 Contact[] @relation("contact2")
-  chats ChatMessage[] @relation()
-  users ChatUser[] @relation()
-  dialogSender DialogMessage[] @relation("Sender")
-  dialogReceiver DialogMessage[] @relation("Receiver")
-  messages Message[] @relation()
+  ContactOwner Contact[] @relation("contact1")
+  ContactContacy Contact[] @relation("contact2")
+  ChatMessage ChatMessage[] @relation()
+  ChatUser ChatUser[] @relation()
+  DialogMessageSender DialogMessage[] @relation("Sender")
+  DialogMessageReceiver DialogMessage[] @relation("Receiver")
+  Message Message[] @relation()
   RecoveryCodesByEmail RecoveryCodesByEmail[] @relation()
 }
 
@@ -94,7 +94,7 @@ model RecoveryCodesByEmail {
   user        User      @relation(fields: [userID], references: [userID])
   userID Int @unique
   code String
-  finishedAt DateTime
+  expiresAt DateTime @db.Timestamptz()
 }
 model Content {
   contentID Int      @id @default(autoincrement())
@@ -104,13 +104,13 @@ model Content {
 }
 
 model Contact {
-  contact1 Int
-  contact2 Int
+  ownerID Int
+  contactID Int
 
-  user1 User @relation("contact1", fields: [contact1], references: [userID])
-  user2 User @relation("contact2", fields: [contact2], references: [userID])
+  UserOwner User @relation("contact1", fields: [ownerID], references: [userID])
+  UserContact User @relation("contact2", fields: [contactID], references: [userID])
 
-  @@id([contact1, contact2])
+  @@id([ownerID, contactID])
 }
 
 

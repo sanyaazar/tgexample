@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { GetUserContactInfoResDTO } from './get-user-contact-info-res.dto';
 
 export class GetUserContactsResDTO {
   @ApiProperty({
@@ -7,5 +8,5 @@ export class GetUserContactsResDTO {
     type: 'string',
     required: true,
   })
-  contactsID: string[];
+  contactsID: number[];
 }

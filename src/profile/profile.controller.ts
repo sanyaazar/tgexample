@@ -186,7 +186,7 @@ export class ProfileController {
     @Param('userLogin') userLogin: string,
     @Res() res: Response,
   ) {
-    const result = await this.profileService.getProfileByLogin(
+    const result = await this.profileService.getUserProfileByLogin(
       +req.user.id,
       userLogin,
     );

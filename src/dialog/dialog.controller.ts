@@ -63,7 +63,7 @@ export class DialogController {
   })
   @HttpCode(HttpStatus.OK)
   async getAllDialogs(@Request() req, @Res() res: Response) {
-    const result = await this.dialogService.getAllDialogs(req.user.id);
+    const result = await this.dialogService.getAllUsersWithDialogs(req.user.id);
     if (result) res.send(result);
   }
 
@@ -84,11 +84,22 @@ export class DialogController {
     description: "Return dialog's messages",
     content: {
       'application/json': {
-        schema: {
-          $ref: getSchemaPath(GetUserDialogDTO),
-        },
         example: {
-          messagesID: ['yd2312dad32', 'hd8f2u1'],
+          messages: [
+            {
+              messageID: 1,
+              messageText: 'Hola oaoaoa',
+              userID: 2,
+              sendAt: '2024-07-06T20:59:08.287Z',
+            },
+            ,
+            {
+              messageID: 2,
+              messageText: 'Hello',
+              userID: 1,
+              sendAt: '2024-07-06T21:00:42.478Z',
+            },
+          ],
         },
       },
     },
@@ -99,7 +110,7 @@ export class DialogController {
     @Param('userLogin') userLogin: string,
     @Res() res: Response,
   ) {
-    const result = await this.dialogService.getDialogByID(
+    const result = await this.dialogService.getMessagesByUserID(
       +req.user.id,
       userLogin,
     );

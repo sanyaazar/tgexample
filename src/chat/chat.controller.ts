@@ -33,7 +33,6 @@ import {
   chatCreateBody,
   CreateChatBodyDTO,
 } from 'src/types/request-dto/create-chat-body.dto';
-import { ResolveFnOutput } from 'module';
 import { GetChatMessagesResDTO } from 'src/types/response-dto/get-chat-messages-res.dto';
 
 @Controller('chat')
@@ -93,11 +92,21 @@ export class ChatController {
     description: "Return chat's messages",
     content: {
       'application/json': {
-        schema: {
-          $ref: getSchemaPath(GetChatMessagesResDTO),
-        },
         example: {
-          messagesID: ['2', '5'],
+          messages: [
+            {
+              messageID: 5,
+              messageText: 'Всем привет, это василий',
+              userID: 3,
+              sendAt: '2024-07-07T11:20:30.930Z',
+            },
+            {
+              messageID: 6,
+              messageText: 'Как у вас дела',
+              userID: 3,
+              sendAt: '2024-07-07T11:22:15.199Z',
+            },
+          ],
         },
       },
     },
@@ -189,12 +198,8 @@ export class ChatController {
     @Body() body: addUserToChatBodyDTO,
     @Res() res: Response,
   ) {
-    const result = await this.chatService.addUserToChat(
-      +req.user.id,
-      body.userLogin,
-      +chatID,
-    );
-    if (result) return res.sendStatus(200);
+    await this.chatService.addUserToChat(+req.user.id, body.userLogin, +chatID);
+    return res.sendStatus(200);
   }
 
   @Delete('kick/:chatID')
@@ -221,7 +226,7 @@ export class ChatController {
     example: '1',
   })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: 'Return status of adding',
   })
   @HttpCode(HttpStatus.OK)
@@ -231,11 +236,11 @@ export class ChatController {
     @Body() body: addUserToChatBodyDTO,
     @Res() res: Response,
   ) {
-    const result = await this.chatService.kickUserFromChat(
+    await this.chatService.kickUserFromChat(
       +req.user.id,
       body.userLogin,
       +chatID,
     );
-    if (result) return res.sendStatus(200);
+    return res.sendStatus(200);
   }
 }

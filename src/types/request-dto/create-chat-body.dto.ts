@@ -1,11 +1,14 @@
 import { ApiBodyOptions, ApiProperty } from '@nestjs/swagger';
+import { IsAlphanumeric, Length } from 'class-validator';
 
 export class CreateChatBodyDTO {
   @ApiProperty({
     description: 'Chat members login',
     example: ['12', '52'],
   })
-  memberLogins: string[];
+  @IsAlphanumeric(undefined, { each: true })
+  @Length(1, 50)
+  userLogins: string[];
 }
 
 export const chatCreateBody: ApiBodyOptions = {
@@ -16,10 +19,10 @@ export const chatCreateBody: ApiBodyOptions = {
         type: 'string',
         format: 'binary',
       },
-      membersID: {
+      memberLogins: {
         type: 'array',
         items: {
-          type: 'number',
+          type: 'string',
         },
       },
     },

@@ -1,5 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ContactRepository, UserRepository } from 'src/database';
 import {
   ChangeProfileBodyDTO,
   GetUserContactInfoResDTO,
@@ -9,7 +13,10 @@ import { UpdateUserProfileResDTO } from 'src/types/response-dto/update-user-prof
 
 @Injectable()
 export class ProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly contactRepository: ContactRepository,
+  ) {}
 
   /**
    * Получает профиль пользователя по логину.
@@ -19,20 +26,7 @@ export class ProfileService {
    * @throws BadRequestException - Если пользователь не найден.
    */
   async getProfile(userLogin: string): Promise<GetUserProfileResDTO> {
-    // const result = await this.prisma.user.findFirst({
-    //   where: {
-    //     login: userLogin,
-    //   },
-    //   select: {
-    //     login: true,
-    //     email: true,
-    //     tel: true,
-    //     displayName: true,
-    //     displayPhotoID: true,
-    //     dateOfBirth: true,
-    //   },
-    // });
-    const result = await this.prisma.getUserByLogin(userLogin);
+    const result = await this.userRepository.getUserByLogin(userLogin);
     if (result) {
       return {
         login: result.login,
@@ -46,77 +40,91 @@ export class ProfileService {
   }
 
   /**
-   * Обновляет профиль пользователя в базе данных.
-   * @param infoToUpdate - Объект с данными для обновления профиля.
-   * @param userLogin - Логин пользователя, чьи данные нужно обновить.
-   * @returns Промис с объектом, содержащим обновленные данные профиля.
-   * @throws {BadRequestException} Выбрасывает исключение, если пользователь не найден или произошла ошибка в процессе обновления.
+   * Изменить данные профиля пользователя
+   * @param {ChangeProfileBodyDTO} infoToUpdate - Объект с информацией для обновления профиля
+   * @param {string} userLogin - Логин пользователя
+   * @returns {Promise<UpdateUserProfileResDTO>} - Объект с обновленной информацией профиля
+   * @throws {NotFoundException} - Если пользователь с указанным логином не найден
+   * @throws {BadRequestException} - Если обновление не удалось
    */
   async changeProfileData(
     infoToUpdate: ChangeProfileBodyDTO,
     userLogin: string,
   ): Promise<UpdateUserProfileResDTO> {
-    const updatedUser = await this.prisma.user.update({
-      where: {
-        login: userLogin,
-      },
-      data: {
-        ...(infoToUpdate.dateOfBirth && {
-          dateOfBirth: new Date(infoToUpdate.dateOfBirth),
-        }),
-        ...(infoToUpdate.displayName && {
-          displayName: infoToUpdate.displayName,
-        }),
-      },
-      select: {
-        dateOfBirth: infoToUpdate.dateOfBirth ? true : false,
-        displayName: infoToUpdate.displayName ? true : false,
-      },
-    });
-    if (updatedUser) {
-      return {
-        displayName: updatedUser.displayName || undefined,
-        dateOfBirth: updatedUser.dateOfBirth || undefined,
-      };
-    } else {
-      throw new BadRequestException();
-    }
+    const userID = await this.userRepository.getUserIDByLogin(userLogin);
+    if (!userID)
+      throw new NotFoundException("User with this login doesn't exist");
+    const updatedUser = await this.userRepository.updateUserInfo(
+      userID,
+      infoToUpdate,
+    );
+    if (updatedUser) return updatedUser;
+    throw new BadRequestException();
   }
 
-  async getProfileByLogin(
+  /**
+   * Получить информацию контакта по его логину
+   * @param {number} userID - ID пользователя
+   * @param {string} contactLogin - Логин контакта
+   * @returns {Promise<GetUserContactInfoResDTO>} - Объект с информацией контакта
+   * @throws {NotFoundException} - Если контакт с указанным логином не найден
+   */
+  async getUserProfileByLogin(
     userID: number,
     contactLogin: string,
   ): Promise<GetUserContactInfoResDTO> {
     // Шаг 1. Получаем ID собеседника
-    const contactID = await this.prisma.getUserIDByLogin(contactLogin);
-
+    const contact = await this.userRepository.getUserByLogin(contactLogin);
+    if (!contact)
+      throw new NotFoundException("User with this login doesn't exist");
     // Шаг 2. Если наш пользователь находится у него в контактах, то
     // наш пользователь получает полную информацию
-    const isOurUserIsContact = await this.prisma.contact.findFirst({
-      where: {
-        contact1: contactID,
-        contact2: userID,
-      },
-    });
+    const isOurUserIsContact = await this.contactRepository.isUserContact(
+      contact.userID,
+      userID,
+    );
 
-    // Шаг 3. Возвращаем информацию пользователю
-    const result = await this.prisma.user.findFirst({
-      where: {
-        userID: contactID,
-      },
-    });
-    if (result) {
-      return {
-        login: result.login,
-        tel: isOurUserIsContact ? result.tel : undefined,
-        email: isOurUserIsContact ? result.email : undefined,
-        displayName: result.displayName,
-        // displayPhoto: result.displayPhotoID
-        dateOfBirth: isOurUserIsContact
-          ? result.dateOfBirth || undefined
-          : undefined,
-      };
-    }
-    throw new BadRequestException();
+    return {
+      login: contact.login,
+      tel: isOurUserIsContact ? contact.tel : undefined,
+      email: isOurUserIsContact ? contact.email : undefined,
+      displayName: contact.displayName,
+      // displayPhoto: result.displayPhotoID
+      dateOfBirth: isOurUserIsContact
+        ? contact.dateOfBirth || undefined
+        : undefined,
+    };
+  }
+
+  /**
+   * Получить информацию контакта по его логину
+   * @param {number} userID - ID пользователя
+   * @param {number} contactID - ID контакта
+   * @returns {Promise<GetUserContactInfoResDTO>} - Объект с информацией контакта
+   * @throws {NotFoundException} - Если контакт с указанным ID не найден
+   */
+  async getUserProfileByID(
+    userID: number,
+    contactID: number,
+  ): Promise<GetUserContactInfoResDTO> {
+    const contact = await this.userRepository.getUserByID(contactID);
+    if (!contact) throw new NotFoundException("User doesn't exist");
+    // Шаг 2. Если наш пользователь находится у него в контактах, то
+    // наш пользователь получает полную информацию
+    const isOurUserIsContact = await this.contactRepository.isUserContact(
+      contactID,
+      userID,
+    );
+
+    return {
+      login: contact.login,
+      tel: isOurUserIsContact ? contact.tel : undefined,
+      email: isOurUserIsContact ? contact.email : undefined,
+      displayName: contact.displayName,
+      // displayPhoto: result.displayPhotoID
+      dateOfBirth: isOurUserIsContact
+        ? contact.dateOfBirth || undefined
+        : undefined,
+    };
   }
 }

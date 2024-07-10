@@ -16,7 +16,6 @@ import {
   EmailValidationBodyDTO,
   EmailValidationConfirmDTO,
   Public,
-  RegisterContentBodyDTO,
 } from 'src/types';
 import {
   ApiBody,
@@ -170,7 +169,7 @@ export class AuthController {
     @Body() body: EmailValidationConfirmDTO,
     @Res() res: Response,
   ) {
-    const result = await this.authService.recoveryByEmailConfirm(body);
-    return res.status(200).send(result);
+    await this.authService.recoveryByEmailConfirm(body);
+    return res.status(200);
   }
 }

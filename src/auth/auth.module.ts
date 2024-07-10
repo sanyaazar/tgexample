@@ -3,10 +3,11 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { Hasher } from './hasher';
 import { TokenGenerator } from './tokenGenerator';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EmailService } from 'src/email/email.service';
 import { AuthGuard } from './auth.guard';
+import { AuthRepository, UserRepository } from 'src/database';
 
 @Module({
   imports: [
@@ -19,8 +20,16 @@ import { AuthGuard } from './auth.guard';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, Hasher, TokenGenerator, EmailService, AuthGuard],
+  providers: [
+    AuthService,
+    Hasher,
+    TokenGenerator,
+    EmailService,
+    AuthGuard,
+    AuthRepository,
+    UserRepository,
+  ],
   controllers: [AuthController],
-  exports: [JwtModule, AuthGuard],
+  exports: [JwtModule, AuthGuard, AuthRepository, UserRepository],
 })
 export class AuthModule {}

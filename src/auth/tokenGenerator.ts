@@ -1,21 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AuthRegisterResDTO } from 'src/types';
 
 @Injectable()
 export class TokenGenerator {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
 
   public async generateTokens(payload: {
     id: number;
-    login: string;
   }): Promise<AuthRegisterResDTO> {
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '1h',
+      expiresIn: this.configService.get<string>('access_token_time'),
     });
     const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '7d',
+      expiresIn: this.configService.get<string>('refresh_token_time'),
     });
 
     // Create an instance of AuthRegisterResDTO

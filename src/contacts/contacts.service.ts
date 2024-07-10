@@ -1,100 +1,83 @@
 import {
-  BadGatewayException,
-  BadRequestException,
+  ConflictException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { GetUserContactsResDTO } from 'src/types';
+import { UserRepository } from 'src/database';
+import { ContactRepository } from 'src/database/contact.repository';
+import { ProfileService } from 'src/profile';
+import { GetUserContactInfoResDTO, GetUserContactsResDTO } from 'src/types';
 
 @Injectable()
 export class ContactsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly contactRepository: ContactRepository,
+    private readonly userRepository: UserRepository,
+    private readonly profileService: ProfileService,
+  ) {}
 
   /**
-   * Получает все контакты для указанного пользователя.
-   *
-   * @param {number} userID - Идентификатор пользователя, для которого необходимо получить контакты.
-   * @returns {Promise<GetUserContactsResDTO>} Объект, содержащий массив идентификаторов контактов.
+   * Получить все контакты пользователя
+   * @param {number} userID - ID пользователя
+   * @returns {Promise<GetUserContactsResDTO>} - Объект с ID контактов пользователя
    */
   async getAllContacts(userID: number): Promise<GetUserContactsResDTO> {
-    const contacts = await this.prisma.contact.findMany({
-      where: {
-        contact1: userID,
-      },
-      select: {
-        contact2: true,
-      },
-    });
-    const contactsID = contacts.map((contact) => contact.contact2.toString());
-    return { contactsID };
+    const contactsID = await this.contactRepository.getUserContactsID(userID);
+    return contactsID;
   }
 
   /**
-   * Добавляет контакт для пользователя.
-   *
-   * @param {number} contact1 - Идентификатор пользователя, который добавляет контакт.
-   * @param {string} contact2Login - Логин пользователя, которого добавляют в контакты.
-   * @returns {Promise<boolean>} Промис, возвращающий true, если контакт успешно добавлен.
-   * @throws {BadRequestException} Выбрасывается, если пользователь уже находится в списке контактов или если добавление не удалось.
+   * Получить все контакты пользователя
+   * @param {number} userID - ID пользователя
+   * @returns {Promise<GetUserContactsResDTO[]>} - Объект с информацией контактов пользователя
    */
-  async addContact(contact1: number, contact2Login: string): Promise<boolean> {
+  async getAllContactsInfo(
+    userID: number,
+  ): Promise<GetUserContactInfoResDTO[]> {
+    const { contactsID } =
+      await this.contactRepository.getUserContactsID(userID);
+    const promises = contactsID.map(async (contactID) => {
+      return await this.profileService.getUserProfileByID(userID, contactID);
+    });
+    const result = await Promise.all(promises);
+    return result;
+  }
+
+  /**
+   * Добавить контакт пользователю
+   * @param {number} ownerID - ID владельца контакта
+   * @param {string} contactLogin - Логин контакта, которого добавляют
+   * @returns {Promise<void>}
+   */
+  async addContact(ownerID: number, contactLogin: string): Promise<void> {
     // Шаг 1. Получаем ID собеседника
-    const contact2ID = await this.prisma.getUserIDByLogin(contact2Login);
+    const contactID = await this.userRepository.getUserIDByLogin(contactLogin);
+    if (!contactID)
+      throw new NotFoundException("User with this login doesn't exist");
+
+    if (contactID === ownerID)
+      throw new ConflictException('Unable to add yourself');
 
     // Шаг 2. Проверяем, есть ли у первого пользователя второй в контактах
-    const result = await this.prisma.contact.findFirst({
-      where: {
-        contact1,
-        contact2: contact2ID,
-      },
-    });
-    if (result) throw new BadRequestException('User is already in contact');
+    const result = await this.contactRepository.isUserContact(
+      ownerID,
+      contactID,
+    );
+    if (result) throw new ConflictException('User is already in contact');
     // Шаг 3. Добавляем пользователя в список контактов
-    const user = await this.prisma.contact.create({
-      data: {
-        contact1,
-        contact2: contact2ID,
-      },
-    });
-    if (user) return true;
-    throw new BadRequestException();
+    await this.contactRepository.addContact(ownerID, contactID);
   }
 
   /**
-   * Удаляет контакт из списка контактов пользователя.
-   *
-   * @param {number} contact1 - Идентификатор пользователя, который удаляет контакт.
-   * @param {string} contact2Login - Логин пользователя, который удаляется из контактов.
-   * @returns {Promise<boolean>} Промис, возвращающий true, если контакт успешно удалён.
-   * @throws {BadRequestException} Выбрасывается, если пользователя нет в списке контактов.
-   * @throws {BadGatewayException} Выбрасывается, если произошла ошибка при удалении контакта.
+   * Удалить контакт пользователя
+   * @param {number} ownerID - ID владельца контакта
+   * @param {string} contactLogin - Логин контакта, который удаляют
+   * @returns {Promise<void>}
    */
-  async deleteContact(
-    contact1: number,
-    contact2Login: string,
-  ): Promise<boolean> {
-    // Шаг 1. Получаем ID собеседника
-    const contact2ID = await this.prisma.getUserIDByLogin(contact2Login);
-
-    // Шаг 2. Проверяем, есть ли у первого пользователя второй в контактах
-    const result = await this.prisma.contact.findFirst({
-      where: {
-        contact1,
-        contact2: contact2ID,
-      },
-    });
-    if (!result) throw new BadRequestException("User isn't a contact");
-
-    // Шаг 3. Удаляем пользователя из списка контактов
-    const user = await this.prisma.contact.delete({
-      where: {
-        contact1_contact2: {
-          contact1,
-          contact2: contact2ID,
-        },
-      },
-    });
-    if (user) return true;
-    throw new BadGatewayException();
+  async deleteContact(ownerID: number, contactLogin: string): Promise<void> {
+    const contactID = await this.userRepository.getUserIDByLogin(contactLogin);
+    if (!contactID)
+      throw new NotFoundException("User with this login doesn't exist");
+    await this.contactRepository.deleteContact(ownerID, contactID);
   }
 }

@@ -39,14 +39,29 @@ export class ContactsController {
     content: {
       'application/json': {
         schema: {
-          $ref: getSchemaPath(GetUserContactsResDTO),
+          $ref: getSchemaPath(GetUserContactInfoResDTO),
+        },
+        example: {
+          contacts: [
+            {
+              login: 'adminArtem',
+              tel: '+79997778899',
+              email: 'temtem2003@gmail.com',
+              displayName: 'Ariem',
+              dateOfBirth: '2003-05-02T00:00:00.000Z',
+            },
+            {
+              login: 'adminVasya',
+              displayName: 'admin Vasya',
+            },
+          ],
         },
       },
     },
   })
   @HttpCode(HttpStatus.OK)
   async getAllContacts(@Request() req, @Res() res: Response) {
-    const result = await this.contactsService.getAllContacts(+req.user.id);
+    const result = await this.contactsService.getAllContactsInfo(+req.user.id);
     if (result) res.send(result);
   }
 
@@ -77,11 +92,8 @@ export class ContactsController {
     @Body('userLogin') userLogin: string,
     @Res() res: Response,
   ) {
-    const result = await this.contactsService.addContact(
-      +req.user.id,
-      userLogin,
-    );
-    if (result) return res.send(result);
+    await this.contactsService.addContact(+req.user.id, userLogin);
+    return res.sendStatus(200);
   }
 
   @Delete()
