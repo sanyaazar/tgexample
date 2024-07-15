@@ -17,13 +17,13 @@ export class AuthRepository {
    * Создает нового пользователя.
    *
    * @param {CreateUserDTO} user - Данные для создания пользователя.
-   * @returns {Promise<number>} Промис, разрешающийся идентификатором созданного пользователя.
+   * @returns {Promise<User>} Промис, разрешающийся идентификатором созданного пользователя.
    */
   async createUser(user: CreateUserDTO): Promise<User> {
     const createdUser = await this.prisma.user.create({
       data: {
         login: user.login,
-        password: await this.hasher.hash(user.password),
+        password: user.password,
         tel: user.tel,
         email: user.email,
         displayName: user.displayName ?? user.login,

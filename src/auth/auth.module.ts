@@ -8,6 +8,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EmailService } from 'src/email/email.service';
 import { AuthGuard } from './auth.guard';
 import { AuthRepository, UserRepository } from 'src/database';
+import { SessionService } from './session/session.service';
+import { SessionRepository } from 'src/database/session.repository';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { AuthRepository, UserRepository } from 'src/database';
     AuthGuard,
     AuthRepository,
     UserRepository,
+    SessionService,
+    SessionRepository,
   ],
   controllers: [AuthController],
   exports: [JwtModule, AuthGuard, AuthRepository, UserRepository],

@@ -7,53 +7,49 @@ import {
 import {
   AuthLoginLocalBodyDTO,
   AuthRegisterBodyDTO,
-  AuthRegisterResDTO,
+  AuthResDTO,
   EmailValidationBodyDTO,
   EmailValidationConfirmDTO,
 } from 'src/types';
 import * as generatePassword from 'generate-password';
 import { Hasher } from './hasher';
-import { TokenGenerator } from './tokenGenerator';
 import { EmailService } from 'src/email/email.service';
 import { ConfigService } from '@nestjs/config';
 import { PasswordRecovery, PasswordRecoveryDTO } from './password-recovery';
 import { AuthRepository, UserRepository } from 'src/database';
+import { SessionService } from './session/session.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly tokenGenerator: TokenGenerator,
     private readonly hasher: Hasher,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     private readonly authRepository: AuthRepository,
     private readonly userRepository: UserRepository,
+    private readonly sessionService: SessionService,
   ) {}
 
-  /**
-   * Регистрирует нового пользователя с предоставленной информацией.
-   *
-   * @param {AuthRegisterBodyDTO} input - Информация о пользователе для регистрации.
-   * @returns {Promise<AuthRegisterResDTO>} Промис, возвращающий access и refresh токены.
-   */
-  public async register(
-    input: AuthRegisterBodyDTO,
-  ): Promise<AuthRegisterResDTO> {
+  public async register(input: AuthRegisterBodyDTO): Promise<number> {
     await this.checkUniqueFields(input);
-    const createdUserID = await this.authRepository.createUser(input);
-    return this.generateTokens(createdUserID.userID);
+    input.password = await this.hasher.hash(input.password);
+    const createdUser = await this.authRepository.createUser(input);
+    return createdUser.userID;
   }
 
   /**
-   * Выполняет процедуру локальной аутентификации для пользователя.
+   * Аутентификация пользователя локально.
    *
-   * @param {AuthLoginLocalBodyDTO} input - Входные данные для аутентификации.
-   * @returns {Promise<AuthRegisterResDTO>} Промис, возвращающий access и refresh токены.
-   * @throws {UnauthorizedException} Если вход или пароль недействительны.
+   * @param {AuthLoginLocalBodyDTO} input - Данные для аутентификации пользователя.
+   * @param {string} ip - IP-адрес пользователя.
+   * @param {string} userAgent - Строка User-Agent браузера пользователя.
+   * @returns {Promise<AuthResDTO>} Промис, который разрешается объектом, содержащим информацию о регистрации пользователя.
    */
   public async localLogin(
     input: AuthLoginLocalBodyDTO,
-  ): Promise<AuthRegisterResDTO> {
+    ip: string,
+    userAgent: string,
+  ): Promise<AuthResDTO> {
     const existedUser = await this.userRepository.getUserByLogin(input.login);
     if (!existedUser)
       throw new UnauthorizedException('Invalid login or password');
@@ -63,7 +59,15 @@ export class AuthService {
     );
     if (!isValidPassword)
       throw new UnauthorizedException('Invalid login or password');
-    return this.generateTokens(existedUser.userID);
+    const createdSession = await this.sessionService.createSession({
+      userID: existedUser.userID,
+      ip,
+      userAgent,
+    });
+    return {
+      access_token: createdSession.accessToken,
+      refresh_token: createdSession.refreshToken,
+    };
   }
 
   /**
@@ -124,18 +128,6 @@ export class AuthService {
   }
 
   // Private Methods
-
-  /**
-   * Генерирует токены для пользователя с указанным идентификатором.
-   *
-   * @param {number} userID - Идентификатор пользователя для генерации токенов.
-   * @returns {Promise<AuthRegisterResDTO>} Промис, разрешающийся сгенерированными токенами.
-   */
-  private async generateTokens(userID: number): Promise<AuthRegisterResDTO> {
-    const payload = { id: userID };
-    const tokens = this.tokenGenerator.generateTokens(payload);
-    return tokens;
-  }
 
   /**
    * Проверяет уникальность полей ввода при регистрации.

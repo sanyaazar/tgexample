@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class AuthResDTO {
+export class GeneratedTokenDTO {
   @ApiProperty({
     description: 'Access Token',
     example:
@@ -14,4 +14,10 @@ export class AuthResDTO {
       'asdsadjasndasdjansjndkasndjkasjkdnja.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
   })
   refresh_token: string;
+
+  @ApiProperty({
+    description: 'Refresh Token expiration date',
+    example: '2024-09-25T00:00:00',
+  })
+  exp: Date;
 }

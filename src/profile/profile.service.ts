@@ -21,12 +21,12 @@ export class ProfileService {
   /**
    * Получает профиль пользователя по логину.
    *
-   * @param userLogin - Логин пользователя, профиль которого нужно получить.
+   * @param userID - ID пользователя, профиль которого нужно получить.
    * @returns Объект профиля пользователя, содержащий login, email, tel, displayName, displayPhotoID и dateOfBirth.
    * @throws BadRequestException - Если пользователь не найден.
    */
-  async getProfile(userLogin: string): Promise<GetUserProfileResDTO> {
-    const result = await this.userRepository.getUserByLogin(userLogin);
+  async getProfile(userID: number): Promise<GetUserProfileResDTO> {
+    const result = await this.userRepository.getUserByID(userID);
     if (result) {
       return {
         login: result.login,

@@ -87,6 +87,7 @@ model User {
   DialogMessageReceiver DialogMessage[] @relation("Receiver")
   Message Message[] @relation()
   RecoveryCodesByEmail RecoveryCodesByEmail[] @relation()
+  Session Session[] @relation()
 }
 
 
@@ -113,7 +114,17 @@ model Contact {
   @@id([ownerID, contactID])
 }
 
+model Session {
+  sessionID Int @id @default(autoincrement())
+  userID Int
+  refreshToken String
+  userAgent String
+  ip String
+  expiresAt DateTime @db.Timestamptz()
+  createdAt DateTime @default(now())
 
+  User User @relation(fields: [userID], references: [userID])
+}
 
 enum Role {
   ADMIN

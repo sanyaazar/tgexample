@@ -51,7 +51,7 @@ export class ProfileController {
   })
   @HttpCode(HttpStatus.OK)
   async getProfile(@Request() req, @Res() res: Response) {
-    const result = await this.profileService.getProfile(req.user.login);
+    const result = await this.profileService.getProfile(+req.user.id);
     if (result) res.send(result);
     else res.sendStatus(400);
   }

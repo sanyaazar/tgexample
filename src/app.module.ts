@@ -7,7 +7,6 @@ import { DialogModule } from './dialog/dialog.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
 import { EmailService } from './email/email.service';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/auth.guard';
@@ -33,8 +32,9 @@ import { ChatModule } from './chat/chat.module';
     EmailService,
     {
       provide: APP_GUARD,
-      useClass: AuthGuard,
+      useExisting: AuthGuard,
     },
+    AuthGuard,
     ChatService,
   ],
 })

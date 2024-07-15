@@ -1,11 +1,16 @@
-version: "3.9"
+version: '3.9'
 services:
   database:
     image: postgres
     container_name: tgexample
     ports:
-      - "5438:5432"
+      - '5438:5432'
+    volumes:
+      - pg-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: "admin"
-      POSTGRES_PASSWORD: "admin"
+      POSTGRES_USER: 'admin'
+      POSTGRES_PASSWORD: 'admin'
       POSTGRES_DB: testdb
+
+volumes:
+  pg-data:

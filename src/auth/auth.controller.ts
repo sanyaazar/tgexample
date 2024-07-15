@@ -1,9 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Post,
+  Request,
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -12,7 +15,6 @@ import {
   AuthLoginLocalBodyDTO,
   authRegisterBody,
   AuthRegisterBodyDTO,
-  AuthRegisterResDTO,
   EmailValidationBodyDTO,
   EmailValidationConfirmDTO,
   Public,
@@ -24,11 +26,15 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+import { SessionService } from './session/session.service';
 
 @Controller('auth')
-@ApiExtraModels(AuthRegisterResDTO)
+@ApiExtraModels(AuthRegisterBodyDTO)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly sessionService: SessionService,
+  ) {}
 
   @Post('register')
   @Public()
@@ -43,18 +49,18 @@ export class AuthController {
   })
   @ApiResponse({
     status: 201,
-    description: 'Return a pair of access and refresh tokens',
+    description: 'Return userID of created user',
     content: {
       'application/json': {
-        schema: {
-          $ref: '#/components/schemas/AuthRegisterResDTO',
+        example: {
+          userID: '12345',
         },
       },
     },
   })
   async createUser(@Body() body: AuthRegisterBodyDTO, @Res() res: Response) {
     const result = await this.authService.register(body);
-    return res.status(201).send(result);
+    return res.json({ userID: result });
   }
 
   @Post('login/local')
@@ -76,19 +82,29 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Return a pair of access and refresh tokens',
+    description: 'Return an access token and a refresh token in cookies',
     content: {
       'application/json': {
         schema: {
-          $ref: '#/components/schemas/AuthRegisterResDTO',
+          $ref: '#/components/schemas/AuthResDTO',
         },
       },
     },
   })
   @HttpCode(HttpStatus.OK)
-  async localLogin(@Body() body: AuthLoginLocalBodyDTO, @Res() res: Response) {
-    const result = await this.authService.localLogin(body);
-    return res.status(200).send(result);
+  async localLogin(@Request() req, @Body() body: AuthLoginLocalBodyDTO) {
+    const result = await this.authService.localLogin(
+      body,
+      req.ip,
+      req.get('User-Agent'),
+    );
+    req.res.cookie('refresh_token', result.refresh_token, {
+      httpOnly: true,
+      secure: false,
+      path: '/auth',
+    });
+
+    return { access_token: result.access_token };
   }
 
   @Post('recovery/email')
@@ -171,5 +187,60 @@ export class AuthController {
   ) {
     await this.authService.recoveryByEmailConfirm(body);
     return res.status(200);
+  }
+
+  @Delete('logout')
+  @ApiOperation({
+    tags: ['Authentication'],
+    summary: 'Logout',
+    description: 'The user logout from service',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns status of logout (done/cancelled)',
+  })
+  async logout(@Request() req, @Res() res: Response) {
+    await this.sessionService.logout({
+      userID: +req.user.id,
+      refreshToken: req.cookies.refresh_token,
+      userAgent: req.headers['User-Agent'],
+    });
+    return res.sendStatus(200);
+  }
+
+  @Post('refresh')
+  @Public()
+  @ApiOperation({
+    tags: ['Authentication'],
+    summary: 'Refresh tokens',
+    description: 'The user refresh tokens',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return an access token and a refresh token in cookies',
+    content: {
+      'application/json': {
+        schema: {
+          $ref: '#/components/schemas/AuthResDTO',
+        },
+      },
+    },
+  })
+  @HttpCode(HttpStatus.OK)
+  async updateRefreshTokens(@Request() req, @Res() res: Response) {
+    const result = await this.sessionService.updateRefreshTokens({
+      userID: +req.user.id,
+      refreshToken: req.cookies.refresh_token,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+    console.log(result);
+    res.clearCookie('refresh_token');
+    res.cookie('refresh_token', result.refresh_token, {
+      httpOnly: true,
+      secure: false,
+      path: '/auth',
+    });
+    return res.json({ access_token: result.access_token });
   }
 }
