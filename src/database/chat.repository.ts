@@ -183,4 +183,30 @@ export class ChatRepository {
     });
     return adminCounts;
   }
+
+  /**
+   * Удаляет чат, всех связанных с ним пользователей и сообщения.
+   *
+   * @async
+   * @function deleteChat
+   * @param {number} chatID - Идентификатор удаляемого чата.
+   * @returns {Promise<void>} - Промис без возвращаемого значения, указывающий на успешное выполнение удаления.
+   */
+  public async deleteChat(chatID: number): Promise<void> {
+    await this.prisma.chatUser.deleteMany({
+      where: {
+        chatID,
+      },
+    });
+    await this.prisma.chatMessage.deleteMany({
+      where: {
+        chatID,
+      },
+    });
+    await this.prisma.chat.delete({
+      where: {
+        chatID,
+      },
+    });
+  }
 }

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -79,12 +80,14 @@ export class AuthService {
    */
   public async recoveryByEmail(input: EmailValidationBodyDTO): Promise<void> {
     const userID = await this.userRepository.getUserIDByEmail(input.email);
-    if (!userID)
+    if (!userID) {
       throw new NotFoundException("User with this email doesn't exist");
+    }
     const code = this.generateCode();
+    const hashCode = await this.hasher.hash(code);
     const passwordRecovery: PasswordRecoveryDTO = PasswordRecovery.create(
       userID,
-      await this.hasher.hash(code),
+      hashCode,
       this.generateCodeDateExpiration(),
       this.hasher,
     );
@@ -124,6 +127,8 @@ export class AuthService {
         await this.hasher.hash(input.password),
       );
       await this.authRepository.deleteRecoveryCodeByUserID(recoveryUser.userID);
+    } else {
+      throw new BadRequestException();
     }
   }
 

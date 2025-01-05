@@ -1,10 +1,10 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Post,
   Request,
   Res,
@@ -27,6 +27,8 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { SessionService } from './session/session.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 @ApiExtraModels(AuthRegisterBodyDTO)
@@ -34,6 +36,8 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly sessionService: SessionService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post('register')
@@ -186,7 +190,7 @@ export class AuthController {
     @Res() res: Response,
   ) {
     await this.authService.recoveryByEmailConfirm(body);
-    return res.status(200);
+    return res.sendStatus(200);
   }
 
   @Delete('logout')
@@ -203,7 +207,7 @@ export class AuthController {
     await this.sessionService.logout({
       userID: +req.user.id,
       refreshToken: req.cookies.refresh_token,
-      userAgent: req.headers['User-Agent'],
+      userAgent: req.get('User-Agent'),
     });
     return res.sendStatus(200);
   }
@@ -229,12 +233,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async updateRefreshTokens(@Request() req, @Res() res: Response) {
     const result = await this.sessionService.updateRefreshTokens({
-      userID: +req.user.id,
+      userID: await this.getUserIDFromRefreshToken(req.cookies.refresh_token),
       refreshToken: req.cookies.refresh_token,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
     });
-    console.log(result);
+
     res.clearCookie('refresh_token');
     res.cookie('refresh_token', result.refresh_token, {
       httpOnly: true,
@@ -242,5 +246,24 @@ export class AuthController {
       path: '/auth',
     });
     return res.json({ access_token: result.access_token });
+  }
+
+  /**
+   * Получает идентификатор пользователя из токена обновления.
+   *
+   * @function getUserIDFromRefreshToken
+   * @param {any} token - Токен обновления.
+   * @returns {Promise<number>} - Промис с идентификатором пользователя.
+   * @throws {BadRequestException} - Если токен неверен или его не удается проверить.
+   */
+  private async getUserIDFromRefreshToken(token: any): Promise<number> {
+    try {
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+      return payload.id;
+    } catch {
+      throw new BadRequestException();
+    }
   }
 }

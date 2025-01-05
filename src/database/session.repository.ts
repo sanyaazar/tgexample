@@ -85,4 +85,17 @@ export class SessionRepository {
       },
     });
   }
+
+  /**
+   * Удаляет все сеансы пользователя из базы данных на основе идентификатора пользователя.
+   * @param {number} userID - Идентификатор пользователя, сеансы которого нужно удалить.
+   * @returns {Promise<void>} - Промис, который завершается после удаления сеансов.
+   */
+  public async deleteAllUserSessions(userID: number): Promise<void> {
+    await this.prisma.session.deleteMany({
+      where: {
+        userID,
+      },
+    });
+  }
 }

@@ -72,7 +72,7 @@ export class ChatController {
     @Res() res: Response,
   ) {
     const result = await this.chatService.createChat(+req.user.id, body, file);
-    if (result) return res.send(result);
+    if (result) return res.status(201).send(result);
   }
 
   @Get(':chatID')
@@ -241,6 +241,32 @@ export class ChatController {
       body.userLogin,
       +chatID,
     );
+    return res.sendStatus(200);
+  }
+
+  @Delete(':chatID')
+  @ApiOperation({
+    tags: ['Chat'],
+    summary: 'Delete chat',
+    description: 'Delete chat providing his id',
+  })
+  @ApiParam({
+    name: 'chatID',
+    description: 'Chat ID',
+    type: 'string',
+    example: '1',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return status of adding',
+  })
+  @HttpCode(HttpStatus.OK)
+  async deleteChat(
+    @Request() req,
+    @Param('chatID') chatID: string,
+    @Res() res: Response,
+  ) {
+    await this.chatService.deleteChat(+req.user.id, +chatID);
     return res.sendStatus(200);
   }
 }

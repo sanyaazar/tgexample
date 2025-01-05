@@ -1,13 +1,9 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { CreatedSessionDTO } from 'src/database/dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { SessionRepository } from 'src/database/session.repository';
 import { TokenGenerator } from '../tokenGenerator';
 import {
   AuthResDTO,
+  CreatedSessionDTO,
   CreateSessionDTO,
   GeneratedTokenDTO,
   LogoutSessionDTO,

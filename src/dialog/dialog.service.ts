@@ -1,19 +1,34 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from 'src/database';
 import { DialogRepository } from 'src/database/dialog.repository';
+import { S3Repository } from 'src/database/s3.repository';
+import { v4 as uuidv4 } from 'uuid';
 
 import {
   GetNewMessageResID,
   GetUserDialogDTO,
   GetUserDialogsDTO,
 } from 'src/types';
+import { ConfigService } from '@nestjs/config';
+import { ContentRepository } from 'src/database/content.repository';
 
 @Injectable()
 export class DialogService {
+  private videoTypes: string[];
+  private imageTypes: string[];
+
   constructor(
     private readonly dialogRepository: DialogRepository,
     private readonly userRepository: UserRepository,
-  ) {}
+    private readonly s3Repository: S3Repository,
+    private readonly configService: ConfigService,
+    private readonly contentRepository: ContentRepository,
+  ) {
+    console.log(this.configService.get<string>('VIDEO_TYPES')!);
+    console.log(this.configService.get<string>('IMAGE_TYPES')!);
+    this.videoTypes = this.configService.get<string>('VIDEO_TYPES')!.split(',');
+    this.imageTypes = this.configService.get<string>('IMAGE_TYPES')!.split(',');
+  }
 
   /**
    * Получить всех пользователей с диалогами для данного пользователя
@@ -74,8 +89,45 @@ export class DialogService {
       senderID,
       receiverID,
     });
-
+    // Шаг 3. Отправляем сообщение в s3 хранилище
+    const uuidFile = uuidv4();
+    if (file) {
+      const fileExtension = await this.getFileExtension(file.originalname);
+      if (this.videoTypes?.includes(fileExtension!)) {
+        await this.s3Repository.uploadFile(
+          'videos',
+          uuidFile + '.' + fileExtension,
+          file.buffer,
+        );
+        const createdContentBD = await this.contentRepository.createContent(
+          newMessage.messageID,
+          uuidFile,
+        );
+      } else if (this.imageTypes?.includes(fileExtension!)) {
+        await this.s3Repository.uploadFile(
+          'photos',
+          uuidFile + '.' + fileExtension,
+          file.buffer,
+        );
+        const createdContentBD = await this.contentRepository.createContent(
+          newMessage.messageID,
+          uuidFile,
+        );
+      }
+    }
     return { messageID: newMessage.messageID.toString() };
-    // TODO: сохранение контента !!!
+  }
+
+  /**
+   * Получает расширение файла на основе его имени.
+   *
+   * @private
+   * @param {string} fileName - Имя файла, для которого нужно получить расширение.
+   * @returns {Promise<string | undefined>} Расширение файла, если оно существует; в противном случае - undefined.
+   */
+  private async getFileExtension(
+    fileName: string,
+  ): Promise<string | undefined> {
+    return fileName.split('.').pop();
   }
 }

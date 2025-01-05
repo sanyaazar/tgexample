@@ -99,9 +99,10 @@ model RecoveryCodesByEmail {
 }
 model Content {
   contentID Int      @id @default(autoincrement())
-  file      String
+  filepath  String
   message   Message? @relation(fields: [messageID], references: [messageID])
   messageID Int
+  createdAt DateTime @default(now())
 }
 
 model Contact {

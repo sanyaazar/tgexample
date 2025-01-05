@@ -8,10 +8,7 @@ import { CreateUserDTO } from './dto';
 
 @Injectable()
 export class AuthRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly hasher: Hasher,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Создает нового пользователя.
@@ -31,6 +28,14 @@ export class AuthRepository {
       },
     });
     return createdUser;
+  }
+
+  async deleteUser(userID: number): Promise<void> {
+    await this.prisma.user.delete({
+      where: {
+        userID,
+      },
+    });
   }
 
   /**
@@ -61,6 +66,13 @@ export class AuthRepository {
    * @returns {Promise<void>} Промис, который разрешается после удаления.
    */
   async deleteRecoveryCodeByUserID(userID: number): Promise<void> {
+    const existingRecord = await this.prisma.recoveryCodesByEmail.findUnique({
+      where: { userID },
+    });
+
+    if (!existingRecord) {
+      return;
+    }
     await this.prisma.recoveryCodesByEmail.delete({
       where: {
         userID,

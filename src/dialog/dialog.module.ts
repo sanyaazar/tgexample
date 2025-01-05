@@ -6,6 +6,8 @@ import {
   DialogRepository,
   UserRepository,
 } from 'src/database';
+import { S3Repository } from 'src/database/s3.repository';
+import { ContentRepository } from 'src/database/content.repository';
 
 @Module({
   controllers: [DialogController],
@@ -14,7 +16,9 @@ import {
     DialogRepository,
     UserRepository,
     ContactRepository,
+    S3Repository,
+    ContentRepository,
   ],
-  exports: [DialogRepository, UserRepository],
+  exports: [DialogRepository, UserRepository, S3Repository, ContentRepository],
 })
 export class DialogModule {}

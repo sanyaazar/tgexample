@@ -204,4 +204,21 @@ export class ChatService {
     // удаляем пользователя
     await this.chatRepository.deleteChatUser(chatID, userToDeleteID);
   }
+
+  /**
+   * Асинхронно удаляет чат, если пользователь с указанным идентификатором является администратором этого чата.
+   *
+   * @param {number} adminID - Идентификатор администратора чата.
+   * @param {number} chatID - Идентификатор удаляемого чата.
+   * @returns {Promise<void>} - Промис без возвращаемого значения, указывающий на успешное выполнение удаления.
+   * @throws {BadRequestException} - Если пользователь не является администратором чата.
+   */
+  async deleteChat(adminID: number, chatID: number): Promise<void> {
+    const isAdmin = await this.chatRepository.isUserChatAdmin(chatID, adminID);
+    if (isAdmin) {
+      await this.chatRepository.deleteChat(chatID);
+    } else {
+      throw new BadRequestException('Unable to delete chat');
+    }
+  }
 }

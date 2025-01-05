@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
   UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { DialogService } from './dialog.service';
 import { Response } from 'express';
@@ -29,7 +30,7 @@ import {
   GetUserDialogsDTO,
   SendMessageBodyDTO,
 } from 'src/types';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiExtraModels(
   SendMessageBodyDTO,
@@ -145,6 +146,7 @@ export class DialogController {
       },
     },
   })
+  @UseInterceptors(FileInterceptor('file'))
   @HttpCode(HttpStatus.CREATED)
   async sendMessage(
     @Request() req,

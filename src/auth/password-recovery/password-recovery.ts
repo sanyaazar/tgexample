@@ -43,7 +43,7 @@ export class PasswordRecovery {
    * @returns {Promise<boolean>} - Результат сравнения: true, если коды совпадают, иначе false.
    */
   public async compareCode(code: string): Promise<boolean> {
-    return this.hasher.compare(this.code, code);
+    return this.hasher.compare(code, this.code);
   }
 
   /**
