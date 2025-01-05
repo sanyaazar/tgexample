@@ -1,11 +1,28 @@
-version: "3.9"
+version: '3.9'
 services:
   database:
     image: postgres
     container_name: tgexample
     ports:
-      - "5438:5432"
+      - '5438:5432'
+    volumes:
+      - pg-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: "admin"
-      POSTGRES_PASSWORD: "admin"
+      POSTGRES_USER: 'admin'
+      POSTGRES_PASSWORD: 'admin'
       POSTGRES_DB: testdb
+  s3:
+    image: 'bitnami/minio:latest'
+    container_name: minio-example
+    ports:
+      - '9000:9000'
+      - '9002:9001'
+    environment:
+      - MINIO_ROOT_USER=minio-root-user
+      - MINIO_ROOT_PASSWORD=minio-root-password
+    volumes:
+      - minio-data:/data
+
+volumes:
+  pg-data:
+  minio-data:

@@ -7,6 +7,8 @@ import {
   Param,
   Post,
   Res,
+  Request,
+  Delete,
 } from '@nestjs/common';
 import { ContactsService } from './contacts.service';
 import { Response } from 'express';
@@ -37,67 +39,30 @@ export class ContactsController {
     content: {
       'application/json': {
         schema: {
-          $ref: getSchemaPath(GetUserContactsResDTO),
-        },
-      },
-    },
-  })
-  @HttpCode(HttpStatus.OK)
-  async getAllContacts(@Res() res: Response) {
-    return res.sendStatus(200);
-  }
-
-  @Get(':contactID')
-  @ApiOperation({
-    tags: ['Contacts'],
-    summary: 'Get contact',
-    description: "The user gets the contact's profile by providing userID",
-  })
-  @ApiParam({
-    name: 'contactID',
-    description: 'User ID to retrieve',
-    type: 'string',
-    example: '123456',
-  })
-  @ApiResponse({
-    status: 200,
-    description:
-      "Returns contact's profile. If another user also have us in contacts, we will see all info.",
-    content: {
-      'application/json': {
-        schema: {
           $ref: getSchemaPath(GetUserContactInfoResDTO),
         },
-        examples: {
-          example1: {
-            description: 'Info if user also has us in contacts',
-            value: {
-              login: 'ivanov',
-              tel: '+79991234567',
-              email: 'ivanov@gmail.com',
-              displayName: 'Ivan Ivanov',
-              displayPhoto: 'file.png',
-              dateOfBirth: '01.01.2003',
+        example: {
+          contacts: [
+            {
+              login: 'adminArtem',
+              tel: '+79997778899',
+              email: 'temtem2003@gmail.com',
+              displayName: 'Ariem',
+              dateOfBirth: '2003-05-02T00:00:00.000Z',
             },
-          },
-          example2: {
-            description: "Info if user hasn't us in contacts",
-            value: {
-              login: 'ivanov',
-              displayName: 'Ivan Ivanov',
-              displayPhoto: 'file.png',
+            {
+              login: 'adminVasya',
+              displayName: 'admin Vasya',
             },
-          },
+          ],
         },
       },
     },
   })
   @HttpCode(HttpStatus.OK)
-  async getContactByID(
-    @Param('contactID') contactID: string,
-    @Res() res: Response,
-  ) {
-    return res.status(200).send(contactID);
+  async getAllContacts(@Request() req, @Res() res: Response) {
+    const result = await this.contactsService.getAllContactsInfo(+req.user.id);
+    if (result) res.send(result);
   }
 
   @Post()
@@ -110,7 +75,7 @@ export class ContactsController {
     schema: {
       type: 'object',
       properties: {
-        userID: {
+        userLogin: {
           type: 'string',
           example: '123456',
         },
@@ -122,7 +87,46 @@ export class ContactsController {
     description: 'Returns status of adding contact (done/cancelled).',
   })
   @HttpCode(HttpStatus.OK)
-  async addContact(@Body('userID') userID: string, @Res() res: Response) {
-    return res.status(200).send(userID);
+  async addContact(
+    @Request() req,
+    @Body('userLogin') userLogin: string,
+    @Res() res: Response,
+  ) {
+    await this.contactsService.addContact(+req.user.id, userLogin);
+    return res.sendStatus(200);
+  }
+
+  @Delete()
+  @ApiOperation({
+    tags: ['Contacts'],
+    summary: 'Delete contact',
+    description: 'The user delete another user from list of contacts',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        userLogin: {
+          type: 'string',
+          example: '123456',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns status of deleting contact (done/cancelled).',
+  })
+  @HttpCode(HttpStatus.OK)
+  async deleteContact(
+    @Request() req,
+    @Body('userLogin') userLogin: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.contactsService.deleteContact(
+      +req.user.id,
+      userLogin,
+    );
+    return res.send(result);
   }
 }

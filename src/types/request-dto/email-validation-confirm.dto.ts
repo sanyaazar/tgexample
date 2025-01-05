@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBase64, IsEmail, IsStrongPassword, Length } from 'class-validator';
+import {
+  IsBase64,
+  IsEmail,
+  IsString,
+  IsStrongPassword,
+  IsUrl,
+  Length,
+} from 'class-validator';
 
 export class EmailValidationConfirmDTO {
   @IsStrongPassword({
@@ -23,7 +30,8 @@ export class EmailValidationConfirmDTO {
     description: 'Received code from Email',
     example: 'TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdC',
   })
-  @IsBase64()
+  // @IsBase64()
+  @IsString()
   @Length(5, 100)
   code: string;
 }

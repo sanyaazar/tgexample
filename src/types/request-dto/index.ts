@@ -5,3 +5,4 @@ export * from './send-message-body.dto';
 export * from './register-content-body.dto';
 export * from './email-validation-body.dto';
 export * from './email-validation-confirm.dto';
+export * from './add-userToChat-body.dto';

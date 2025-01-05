@@ -10,15 +10,15 @@ import {
 } from 'class-validator';
 
 export class ChangeProfileBodyDTO {
-  @ApiProperty({
-    description: 'Login',
-    minLength: 2,
-    maxLength: 50,
-    example: 'ivanov',
-  })
-  @Length(2, 50)
-  @IsAlphanumeric()
-  login: string;
+  // @ApiProperty({
+  //   description: 'Login',
+  //   minLength: 2,
+  //   maxLength: 50,
+  //   example: 'ivanov',
+  // })
+  // @Length(2, 50)
+  // @IsAlphanumeric()
+  // login: string;
 
   @ApiProperty({
     description: 'Phone number',

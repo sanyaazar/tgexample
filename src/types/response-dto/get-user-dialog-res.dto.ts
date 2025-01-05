@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Message } from '@prisma/client';
 
 export class GetUserDialogDTO {
   @ApiProperty({
@@ -7,5 +8,5 @@ export class GetUserDialogDTO {
     type: 'list',
     required: true,
   })
-  messagesID: string[];
+  messages: Message[];
 }
